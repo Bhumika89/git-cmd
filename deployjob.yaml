@@ -1,6 +1,6 @@
 ---
 
--  name: AML server ping
+-  name: AML server pin
    gather_facts: false
    hosts: DEAWA15018
    vars_files:
