@@ -1,0 +1,190 @@
+
+node('AML_slave')
+{
+    
+ stage("code checkout"){
+        
+        dir("D:/AML/workspace/$JOB_NAME")
+        {
+            
+        
+     cleanWs()
+       bat("git clone -b $gitbranch http://$gituserId:$gitpassword@10.41.75.8:7990/scm/ar/aml-frontend.git")
+           
+         
+        bat("git clone -b $gitbranch http://$gituserId:$gitpassword@10.41.75.8:7990/scm/ar/aml-frontend-node-modules.git")
+         
+     
+       bat("git clone -b $gitbranch http://$gituserId:$gitpassword@10.41.75.8:7990/scm/ar/aml-frontend-service.git")
+          
+
+        bat("git clone -b $gitbranch http://$gituserId:$gitpassword@10.41.75.8:7990/scm/ar/configmanagement.git")
+    }
+   }
+    
+     stage("Copy folder"){
+            
+      echo "Copying node_modules folder from aml-frontend-node-modules to aml-frentend"
+          
+            dir("D:/AML/workspace/AML/AML-Frontend-pipeline/AML-Frontend-Build/aml-frontend"){
+                          bat("mkdir node_modules")
+            }
+            
+      bat("xcopy D:\\AML\\workspace\\AML\\AML-Frontend-pipeline\\AML-Frontend-Build\\aml-frontend-node-modules\\node_modules D:\\AML\\workspace\\AML\\AML-Frontend-pipeline\\AML-Frontend-Build\\aml-frontend\\node_modules /s /y")
+    
+    }
+
+   
+      stage("Node Installation")  {
+        dir("D:/AML/workspace/$JOB_NAME/aml-frontend"){
+         bat("node -v")
+     bat("ng update @angular/cli @angular/core ")
+        bat("ng --version")
+          bat("npm install")
+       //    bat("npm install -g @angular/cli")
+          bat("npm run build:prod")
+         }
+         
+      }
+      
+        
+        stage("copy appconfig"){
+          
+          if("${environment}" == "PROD"){
+          
+          bat("xcopy D:\\AML\\workspace\\AML\\AML-Frontend-pipeline\\AML-Frontend-Build\\configmanagement\\aml\\Prod-cm\\config\\aml-frontend-service\\appconfig.json D:\\AML\\workspace\\AML\\AML-Frontend-pipeline\\AML-Frontend-Build\\aml-frontend\\dist\\AML\\assets\\config /s /y ")
+
+          }
+          else if("${environment}" == "SIT"){
+           bat("xcopy D:\\AML\\workspace\\AML\\AML-Frontend-pipeline\\AML-Frontend-Build\\configmanagement\\aml\\SIT-cm\\config\\aml-frontend-service\\appconfig.json D:\\AML\\workspace\\AML\\AML-Frontend-pipeline\\AML-Frontend-Build\\aml-frontend\\dist\\AML\\assets\\config /s /y ")
+          }else{
+            bat("xcopy D:\\AML\\workspace\\AML\\AML-Frontend-pipeline\\AML-Frontend-Build\\configmanagement\\aml\\UAT-cm\\config\\aml-frontend-service\\appconfig.json D:\\AML\\workspace\\AML\\AML-Frontend-pipeline\\AML-Frontend-Build\\aml-frontend\\dist\\AML\\assets\\config  /s /y ")
+          }
+          
+     
+      }
+      
+     
+        stage(" dist copy "){
+          bat("xcopy D:\\AML\\workspace\\AML\\AML-Frontend-pipeline\\AML-Frontend-Build\\aml-frontend\\dist D:\\AML\\workspace\\AML\\AML-Frontend-pipeline\\AML-Frontend-Build\\aml-frontend-service\\src\\main\\resources\\frontend\\dist /s /y")
+        }
+      
+        stage("Maven Build"){
+          
+          bat("mvn -version")
+        // bat("dir")
+          dir("D:/AML/workspace/$JOB_NAME/aml-frontend-service"){
+          def mvnHome=tool name: 'Maven', type: 'maven'
+         
+          bat "${mvnHome}/bin/mvn clean"
+           bat "${mvnHome}/bin/mvn package"
+           
+          } 
+          
+        
+      } 
+      
+      
+     
+     
+     stage("upload artifacts"){
+         
+          if("${environment}" == "SIT"){
+         
+           dir("D:/AML/workspace/AML/AML-Frontend-pipeline/AML-Frontend-Build/aml-frontend-service/target"){
+      
+         archiveArtifacts '**/*.jar'
+         }
+    def stdouts =powershell(returnStdout: true, script: ''' compress-Archive D:/AML/workspace/AML/AML-Frontend-pipeline/AML-Frontend-Build/aml-frontend-service/target/aml-frontend-service.jar D:\\AML\\SITenv_${env:BUILD_NUMBER}.zip''')
+       def server = Artifactory.server 'aml-artifactory'                                                                  
+          def uploadSpec = """{
+               "files": [{
+                 "pattern": "D:/AML/SITenv_${env:BUILD_NUMBER}.zip",
+                  "target": "aml-frontend/SIT/"
+                  }
+                  ]
+                 }"""
+                 server.upload(uploadSpec)
+                 // bat("xcopy D:\\AML\\workspace\\AML-application\\AML-JOB-FRONTEND\\aml-fr\\node_modules D:\\AML\\workspace\\AML-test-folder\\AML-JOB\\aml-frontend\\node_modules /s /y")
+          }
+    
+         
+          else if("${environment}" == "PROD"){
+           dir("D:/AML/workspace/AML/AML-Frontend-pipeline/AML-Frontend-Build/aml-frontend-service/target"){
+      
+         archiveArtifacts '**/*.jar'
+         }
+    def stdouts =powershell(returnStdout: true, script: ''' compress-Archive D:/AML/workspace/AML/AML-Frontend-pipeline/AML-Frontend-Build/aml-frontend-service/target/aml-frontend-service.jar D:\\AML\\PRODenv_${env:BUILD_NUMBER}.zip''')
+        println stdouts
+        def server = Artifactory.server 'aml-artifactory'                                                                  
+           def uploadSpec = """{
+               "files": [{
+                  "pattern": "D:/AML/PRODenv_${env:BUILD_NUMBER}.zip",
+                  "target": "aml-frontend/PROD/"
+                  }
+                  
+                  ]
+           }"""
+            server.upload(uploadSpec)
+           
+          }        
+         
+         else{
+           dir("D:/AML/workspace/AML/AML-Frontend-pipeline/AML-Frontend-Build/aml-frontend-service/target"){
+      
+         archiveArtifacts '**/*.jar'
+         }
+    def stdouts =powershell(returnStdout: true, script: ''' compress-Archive D:/AML/workspace/AML/AML-Frontend-pipeline/AML-Frontend-Build/aml-frontend-service/target/aml-frontend-service.jar D:\\AML\\UATenv_${env:BUILD_NUMBER}.zip''')
+        println stdouts
+        def server = Artifactory.server 'aml-artifactory'                                                                  
+           def uploadSpec = """{
+               "files": [{
+                  "pattern": "D:/AML/UATenv_${env:BUILD_NUMBER}.zip",
+                  "target": "aml-frontend/UAT/"
+                  }
+                  ]
+           }"""
+              server.upload(uploadSpec)     
+                  
+           }  
+          }
+        stage("upload configmanagent "){
+           dir("D:/AML/workspace/AML/AML-Frontend-pipeline/AML-Frontend-Build/configmanagement"){
+                archiveArtifacts '**'
+               
+              
+           }
+           
+    def stdouts =powershell(returnStdout: true, script: ''' compress-Archive D:/AML/workspace/AML/AML-Frontend-pipeline/AML-Frontend-Build/configmanagement D:\\AML\\AMLconfig_${env:BUILD_NUMBER}.zip''')
+        println stdouts
+        def server = Artifactory.server 'aml-artifactory'                                                                  
+           def uploadSpec = """{
+               "files": [{
+                  "pattern": "D:/AML/AMLconfig_${env:BUILD_NUMBER}.zip",
+                  "target": "aml-frontend"
+                  }
+                  ]
+                 }"""
+                 server.upload(uploadSpec)
+        
+
+        }
+        
+     stage("ansible-frontend-deploy") {
+            
+    
+  
+      
+  build job:'AML-Frontend-Deploy-DEV', parameters: [[$class: 'StringParameterValue', name: 'version', value: version],[$class: 'StringParameterValue', name: 'ARFTUID', value: ARFTUID],[$class: 'StringParameterValue', name: 'ARFTPWD', value: ARFTPWD]]
+ currentBuild.result= 'SUCCESS'
+    
+  }
+     
+        
+        stage("CleanWorkspace") {
+    /* clean up our workspace only created folder */
+          // cleanWs()
+        }
+        }
+      
+

@@ -1,0 +1,60 @@
+---
+
+-  name: AML server ping
+   gather_facts: false
+   hosts: DEAWA15018
+   vars_files:
+    - ./aml-vault.yaml
+   vars:
+    version: "{{version}}"
+    ARFTUID: "{{ARTFUID}}"
+    ARFTPWD: "{{ARFTPWD}}"
+
+   tasks:
+    - name: ping
+      win_ping:
+
+    - name: "stop the service"
+      win_service:
+        name: aml-frontend-service
+        state: stopped
+
+    - name: "ensure that privious jar should be removed"
+      win_file:
+        state: absent
+        path: "D:/app/services/aml-frontend-service/aml-frontend-service.jar"
+
+
+
+    - name: "To download artifactory from Jfrog"
+      win_get_url:
+        url: "http://10.41.75.8:8061/artifactory/aml-frontend/SIT/SITenv_{{version}}.zip!/aml-frontend-service.jar"
+        dest: "D:/app/services/aml-frontend-service/aml-frontend-service.jar"
+        url_username: "{{ARFTUID }}"
+        url_password: "{{ARFTPWD }}"
+
+
+
+    - name: "ensure that privious config file  should be removed"
+      win_file:
+        state: absent
+        path: "D:/app/services/aml-frontend-service/config/application.properties"
+
+
+
+
+
+    - name: "To download configmanagement from Jfrog"
+      win_get_url:
+        url: "http://10.41.75.8:8061/artifactory/aml-frontend/AMLconfig_{{version}}.zip!/configmanagement/aml/SIT-cm/config/aml-frontend-service/application.properties"
+        dest: "D:/app/services/aml-frontend-service/config"
+        url_username: "{{ARFTUID}}"
+        url_password: "{{ARFTPWD}}"
+
+
+
+
+    - name: "start the service"
+      win_service:
+        name: aml-frontend-service
+        state: started

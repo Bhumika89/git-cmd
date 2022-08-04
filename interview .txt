@@ -1,0 +1,119 @@
+tr and catch 
+variables
+
+
+node('slave')
+{
+try{
+stage("clone")
+{
+bat("git clone -b $branchnmae 
+
+
+}
+setENV {
+deploymnent='sit'
+version='45'
+}
+
+stage("build)
+{
+def mvnhome= 'path home"
+
+mvn clean 
+
+
+}
+}
+}
+catch()
+{
+
+}
+
+_______________
+
+etc/ansible.
+vihosts 
+
+hostnamr
+usename
+pwd
+
+ansibe-vaults edit yaml 
+
+
+
+
+---
+   - name: AML deploymnent
+     hostanme:
+    vars:
+	
+	
+	_______________
+	
+	
+	Dockerfile
+	_______________
+	
+	
+	From  :Java:latestj
+    ARG user 
+        pwd 
+
+RUN url 
+ RUN yum 
+RUN   
+
+
+sh {java -java 
+En
+______________________
+
+docker exec -it containerid bash 
+docker cp /  
+______________________
+
+    
+	1. kubectl logs podname 
+	2.autoscaling 
+	3.
+	
+	kubectl 
+	
+	
+	
+	
+
+
+
+
+
+
+ 
+
+
+
+
+
+		
+	
+	
+	
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
